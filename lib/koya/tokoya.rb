@@ -86,10 +86,6 @@ class Koya
         @conn.tranabort 
       rescue Exception
       end
-      begin
-        @conn.close
-      rescue Exception
-      end
       @abort = true
     end
 
@@ -132,8 +128,8 @@ class Koya
             return result
           end
         ensure
-          stack.pop
           @cache.done
+          stack.pop
           @in_transaction = nil
         end
       end
