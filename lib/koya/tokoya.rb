@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # -*- indent-tabs-mode: nil -*-
 
 require 'koya/koya'
@@ -70,10 +71,10 @@ class Koya
     def initialize(name, use_log=true)
       super()
       @name = name
+      @conn = BDB.new
       @in_transaction = nil
       @use_log = use_log
       @root = setup_root(use_log)
-      @conn = nil
       setup_version
     end
     attr_reader :root, :version, :use_log, :in_transaction, :name
@@ -95,7 +96,6 @@ class Koya
     def tokoya_transaction
       @revision = nil
       @abort = false
-      @conn = BDB.new
       @conn.open(@name, TokyoCabinet::BDB::OWRITER | TokyoCabinet::BDB::OCREAT)
       @conn.tranbegin
       return yield(@conn)
