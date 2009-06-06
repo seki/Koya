@@ -178,9 +178,10 @@ class Koya
       "p.#{rowid}@#{name}"
     end
 
-    def prop_log(h, rowid, name, k, v)
+    def prop_log(h, rowid, name, op, k, v)
       return unless @use_log
-      h["P.#{@in_transaction}@#{rowid}@#{name}"] = Marshal.dump([k, v])
+      h.putdup("P.#{@in_transaction}@#{rowid}@#{name}",
+               Marshal.dump([op, k, v]))
       h['revision.' + @in_transaction] = '1'
       @revision = @in_transaction
     end
@@ -189,7 +190,7 @@ class Koya
       transaction do |h|
         k, v = dump_object(obj)
         h[prop_addr(rowid, name)] = Marshal.dump([k, v])
-        prop_log(h, rowid, name, k, v)
+        prop_log(h, rowid, name, :set, k, v)
         obj
       end
     end
@@ -210,7 +211,7 @@ class Koya
     def delete_prop(rowid, name)
       transaction do |h|
         h.outlist(prop_addr(rowid, name))
-        prop_log(h, rowid, name, nil, nil)
+        prop_log(h, rowid, name, :delete, nil, nil)
         @revision = @in_transaction
       end
     end
@@ -416,17 +417,12 @@ class Koya
 
       def flatten(rev, work, h)
         cursor = h.cursor
-        cursor.jump("revision.#{rev}")
-        unless /^revision\.(.+)$/ =~ cursor.key
-          return # fixme
-        end
-        prefix = "P.#{$1}@"
-        cursor.jump(prefix)
-        cursor.prev
-        while /^P\.\d+\.\d+\@(\d+)\@(.+)$/ =~ cursor.key
-          key = "p.#{$1}@#{$2}"
-          work[key] = cursor.val unless work[key]
-          break unless cursor.prev
+        cursor.jump('P.')
+        while /^P\.(\d+\.\d+)\@(\d+)\@(.+)$/ =~ cursor.key
+          break if $1 > rev
+          key = "p.#{$2}@#{$3}"
+          work[key] = cursor.val
+          cursor.next
         end
       end
 
@@ -436,7 +432,7 @@ class Koya
         cursor.jump(prefix)
         while cursor.key.index(prefix) == 0
           unless work[cursor.key]
-            work[cursor.key] = Marshal.dump([nil, nil])
+            work[cursor.key] = Marshal.dump([:delete, nil, nil])
           end
           cursor.next
         end
@@ -450,10 +446,10 @@ class Koya
         while /^p\.(\d+)\@(.+)$/ =~ cursor.key
           rowid = $1
           name = $2
-          k, v = Marshal.load(cursor.val)
+          op, k, v = Marshal.load(cursor.val)
           if k
             h[cursor.key] = Marshal.dump([k, v])
-            @store.prop_log(h, rowid, name, k, v)
+            @store.prop_log(h, rowid, name, :set, k, v)
           else
             @store.delete_prop(rowid, name)
           end
@@ -480,7 +476,7 @@ class Koya
               ; 
             end
             delete_unmarked
-            delete_prop_log
+#            delete_prop_log
           end
           @work.vanish
           @store.vacuum
