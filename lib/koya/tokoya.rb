@@ -21,7 +21,7 @@ val = class.to_s
 == log
 
 key = "P.#{@in_transaction}@#{rowid}@#{name}"
-val = Marshal.dump([klass, value])
+val = Marshal.dump([op, klass, value])
 
 == revision
 
