@@ -743,25 +743,26 @@ module KoyaTestMixin
       root['dict']['one'] = Koya::Dict.new
     end
     dict = root['dict']
-    dict_id = dict._koya_rowid_
-    assert_equal([], @koya.get_changed_prop(dict_id))
+
+    assert_equal(false, dict._koya_has_changed_)
 
     dict['two'] = 2
-    assert_equal([], @koya.get_changed_prop(dict_id))
+    assert_equal(false, dict._koya_has_changed_)
 
     dict['one']['one-one'] = 11
-    assert_equal(['one'], @koya.get_changed_prop(dict_id))
+    assert_equal(true, dict._koya_has_changed_)
 
-    @koya.touch_prop(dict_id, 'one')
-    assert_equal([], @koya.get_changed_prop(dict_id))
+    dict._koya_updated_
+    assert_equal(false, dict._koya_has_changed_)
 
     dict['two'] = dict['one']
-    assert_equal([], @koya.get_changed_prop(dict_id))
+    assert_equal(false, dict._koya_has_changed_)
 
     dict['one']['one-one'] = 22
-    assert_equal(['one', 'two'], @koya.get_changed_prop(dict_id))
+    assert_equal(true, dict._koya_has_changed_)
+    assert_equal(['one', 'two'], dict._koya_changed_prop_)
 
-    @koya.touch_all_prop(dict_id)
-    assert_equal([], @koya.get_changed_prop(dict_id))
+    dict._koya_updated_
+    assert_equal(false, dict._koya_has_changed_)
   end
 end
