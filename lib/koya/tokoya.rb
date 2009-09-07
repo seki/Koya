@@ -12,7 +12,6 @@ require 'tokyocabinet'
 key = "p.#{rowid}@#{name}" 
 val = Marshal.dump([klass, value])
 
-
 == memory
 
 key = "m.#{rowid}"
@@ -23,6 +22,16 @@ val = class.to_s
 key = "P.#{@in_transaction}@#{rowid}@#{name}"
 val = Marshal.dump([op, klass, value])
 
+== age
+
+key = "a.#{rowid}"
+val = in_transaction
+
+== age of property
+
+key = "A.#{rowid}@#{name}" 
+val = in_transaction
+
 == revision
 
 key = "revision.#{@in_transaction}"
@@ -32,6 +41,12 @@ val = 1
 
 key = "lock.#{rowid}"
 val = 1
+
+== age
+
+key = "m.#{rowid}"
+val = #{@in_transaction}
+
 =end
 
 class Koya
@@ -164,6 +179,7 @@ class Koya
       transaction do |h|
         rowid = get_koya_id(h)
         h['m.' + rowid] = klass.to_s
+        h['a.' + rowid] = in_transaction
         KoyaRef.new(self, rowid)
       end
     end
@@ -183,7 +199,56 @@ class Koya
       h.putdup("P.#{@in_transaction}@#{rowid}@#{name}",
                Marshal.dump([op, k, v]))
       h['revision.' + @in_transaction] = '1'
+      h["a.#{rowid}"] = @in_transaction
+      h["A.#{rowid}@#{name}"] = (k == '@') ? h["a.#{v}"] : @in_transaction
       @revision = @in_transaction
+    end
+
+    def get_age(rowid)
+      transaction do |h|
+        h["a.#{rowid}"]
+      end
+    end
+
+    def touch_prop(rowid, name)
+      transaction do |h|
+        begin
+          value = h[prop_addr(rowid, name)]
+          return nil unless value
+          k, v = Marshal.load(value)
+          prop_log(h, rowid, name, :set, k, v)
+        rescue
+          return nil
+        end
+      end
+    end
+
+    def touch_all_prop(rowid)
+      transaction do |h|
+        prop_keys(rowid).each do |key|
+          touch_prop(rowid, key)
+        end
+      end
+    end
+
+    def get_changed_prop(rowid)
+      if block_given?
+        transaction do |h|
+          prefix = "p.#{rowid}@"
+          prop_loop(prefix) do |cursor|
+            key = cursor.key
+            key[0, prefix.size] = ''
+            k, v = Marshal.load(cursor.val)
+            if k == '@' && h["A.#{rowid}@#{key}"] != h["a.#{v}"]
+              yield(key)
+            end
+          end
+        end
+      else
+        ary = []
+        get_changed_prop(rowid) {|x| ary.push(x)}
+        ary
+      end
     end
 
     def set_prop(rowid, name, obj)
@@ -242,7 +307,7 @@ class Koya
     def prop_keys(rowid)
       ary = []
       prefix = "p.#{rowid}@"
-      prop_loop(prefix) do |h|
+      prop_loop(prefix) do |cursor|
         key = cursor.key
         key[0, prefix.size] = ''
         ary.push(key)

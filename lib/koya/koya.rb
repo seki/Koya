@@ -3,7 +3,7 @@
 require 'monitor'
 
 class Koya
-  VERSION = '0.4'
+  VERSION = '0.5'
 
   class KoyaError < RuntimeError; end
   class TransactionNotFound < KoyaError; end
@@ -74,7 +74,7 @@ class Koya
     attr_reader :cache
     
     def time_to_rev(time)
-      sprintf("%020.8f", time)
+      sprintf("%011d.%06d", time.to_i, time.usec)
     end
 
     def dump_object(obj)
@@ -339,6 +339,16 @@ class Koya
 
     def _koya_rowid_; @rowid; end
     def _koya_store_; @store; end
+
+    def _koya_dirty?_
+      @store.get_changed_prop(@rowid) {|x| return true}
+      false
+    end
+
+    def _koya_updated_
+      @store.get_changed_prop(@rowid) {|x| return true}
+      false
+    end
 
     def method_missing(msg_id, *a, &b)
       if Thread.current['_koya_'].to_a[-1]

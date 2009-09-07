@@ -7,12 +7,12 @@ module KoyaTestMixin
   end
 
   def test_create_twice
-    assert_equal('0.4', @koya.version)
+    assert_equal('0.5', @koya.version)
 
     first = @koya
     second = @koya.class.new(@dbname)
 
-    assert_equal('0.4', second.version)
+    assert_equal('0.5', second.version)
 
     assert_equal(nil, first['foo'])
     first['foo'] = 123.0
@@ -734,5 +734,34 @@ module KoyaTestMixin
       end
     end
     assert_equal(3, two.count)
+  end
+
+  def test_age
+    root = @koya.root
+    root.transaction do
+      root['dict'] = Koya::Dict.new
+      root['dict']['one'] = Koya::Dict.new
+    end
+    dict = root['dict']
+    dict_id = dict._koya_rowid_
+    assert_equal([], @koya.get_changed_prop(dict_id))
+
+    dict['two'] = 2
+    assert_equal([], @koya.get_changed_prop(dict_id))
+
+    dict['one']['one-one'] = 11
+    assert_equal(['one'], @koya.get_changed_prop(dict_id))
+
+    @koya.touch_prop(dict_id, 'one')
+    assert_equal([], @koya.get_changed_prop(dict_id))
+
+    dict['two'] = dict['one']
+    assert_equal([], @koya.get_changed_prop(dict_id))
+
+    dict['one']['one-one'] = 22
+    assert_equal(['one', 'two'], @koya.get_changed_prop(dict_id))
+
+    @koya.touch_all_prop(dict_id)
+    assert_equal([], @koya.get_changed_prop(dict_id))
   end
 end
