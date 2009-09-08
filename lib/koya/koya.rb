@@ -300,6 +300,22 @@ class Koya
     def unlock
       @store.unlock_object(@rowid)
     end
+
+    def has_changed?(result=nil)
+      if result && @store.get_prop_age(@rowid, result) != @store.get_age(@rowid)
+        return true
+      end
+      @store.get_changed_prop(@rowid) {|x| return true}
+      false
+    end
+
+    def changed_prop
+      @store.get_changed_prop(@rowid)
+    end
+
+    def updated
+      @store.touch_all_prop(@rowid)
+    end
   end
 
   class KoyaRef
@@ -339,19 +355,6 @@ class Koya
 
     def _koya_rowid_; @rowid; end
     def _koya_store_; @store; end
-
-    def _koya_has_changed_
-      @store.get_changed_prop(@rowid) {|x| return true}
-      false
-    end
-
-    def _koya_changed_prop_
-      @store.get_changed_prop(@rowid)
-    end
-
-    def _koya_updated_
-      @store.touch_all_prop(@rowid)
-    end
 
     def method_missing(msg_id, *a, &b)
       if Thread.current['_koya_'].to_a[-1]

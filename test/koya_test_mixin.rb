@@ -744,25 +744,25 @@ module KoyaTestMixin
     end
     dict = root['dict']
 
-    assert_equal(false, dict._koya_has_changed_)
+    assert_equal(false, dict._koya_.has_changed?)
 
     dict['two'] = 2
-    assert_equal(false, dict._koya_has_changed_)
+    assert_equal(false, dict._koya_.has_changed?)
 
     dict['one']['one-one'] = 11
-    assert_equal(true, dict._koya_has_changed_)
+    assert_equal(true, dict._koya_.has_changed?)
 
-    dict._koya_updated_
-    assert_equal(false, dict._koya_has_changed_)
+    dict._koya_.updated
+    assert_equal(false, dict._koya_.has_changed?)
 
     dict['two'] = dict['one']
-    assert_equal(false, dict._koya_has_changed_)
+    assert_equal(false, dict._koya_.has_changed?)
 
     dict['one']['one-one'] = 22
-    assert_equal(true, dict._koya_has_changed_)
-    assert_equal(['one', 'two'], dict._koya_changed_prop_)
+    assert_equal(true, dict._koya_.has_changed?)
+    assert_equal(['one', 'two'], dict._koya_.changed_prop)
 
-    dict._koya_updated_
-    assert_equal(false, dict._koya_has_changed_)
+    dict._koya_.updated
+    assert_equal(false, dict._koya_.has_changed?)
   end
 end

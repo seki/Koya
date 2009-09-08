@@ -210,6 +210,12 @@ class Koya
       end
     end
 
+    def get_prop_age(rowid, name)
+      transaction do |h|
+        h["A.#{rowid}@#{name}"]
+      end
+    end
+
     def touch_prop(rowid, name)
       transaction do |h|
         begin
