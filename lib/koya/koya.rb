@@ -309,6 +309,10 @@ class Koya
       false
     end
 
+    def prop_age(name)
+      @store.get_prop_age(@rowid, name)
+    end
+
     def changed_prop
       @store.get_changed_prop(@rowid)
     end
